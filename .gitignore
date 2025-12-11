@@ -1,2 +1,5 @@
 bin/
 .DS_Store
+src/out/
+src/.idea/
+.idea/
