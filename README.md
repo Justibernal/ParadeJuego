@@ -95,4 +95,4 @@ El diagrama de clases UML incluye:
 
 A continuación se muestra la imagen del UML:
 
-![Diagrama UML](uml.png)
+![Diagrama UML](UML.png)
