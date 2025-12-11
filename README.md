@@ -1,92 +1,136 @@
 ParadeRMI  
-Alumno: Justino Bernal  
+Alumno: Justino Bernal
 Legajo: 190118
 
-Descripción  
-Parade es un juego de cartas para varios jugadores basado en un desfile (el “carnaval”) donde cada jugador intenta terminar con la menor cantidad de puntos posible.
+🃏 ¿Qué es Parade?
 
-El mazo está formado por 66 cartas: 6 colores distintos, con valores del 0 al 10.  
-Cada jugador tiene una mano de cartas y, en el centro de la mesa, se forma una fila de cartas llamada “carnaval”.
+Parade es un juego de cartas donde los jugadores intentan terminar con la menor cantidad de puntos posible.
+Hay 66 cartas (6 colores × valores 0 a 10).
+En el centro se forma una fila llamada carnaval, y cada jugador tiene una mano de cartas.
 
-El proyecto implementa este juego en forma distribuida:  
-existe un servidor que mantiene el estado de la partida (mazo, jugadores, carnaval, puntajes) y varios clientes que se conectan al servidor mediante RMI. Cada cliente puede usar una vista gráfica (Swing) o una vista por consola, pero ambos hablan con el mismo modelo remoto.
+🖥 Arquitectura general del proyecto
 
-Fases del juego
+Este proyecto implementa el juego usando:
 
-1) Unión de jugadores y preparación  
-Antes de empezar a jugar, los clientes se conectan al servidor y cada jugador se “une” a la partida indicando su nombre.  
-El servidor va registrando a los jugadores y, cuando se decide iniciar la partida, realiza:
+MVC distribuido
 
-- Creación y mezcla del mazo de 66 cartas.  
-- Reparto de cartas iniciales a cada jugador.  
-- Colocación de las cartas iniciales en la mesa para formar el carnaval.  
-- Inicialización del turno (quién empieza).
+RMI para comunicación cliente-servidor
 
-En esta fase no se realizan jugadas todavía: solo se prepara el estado inicial del juego.
+Observer remoto para actualizar las vistas en tiempo real
 
-2) Desarrollo de la partida (turnos y jugadas)  
-La partida se desarrolla por turnos, siguiendo el orden en que los jugadores se unieron al juego.  
-En su turno, cada jugador realiza exactamente una acción principal:
+Dos clientes: Vista gráfica (Swing) y Vista consola
 
-- Elegir una carta de su mano.  
-- Jugar esa carta al final del carnaval (la fila de cartas en la mesa).
+El servidor mantiene todo el estado del juego (mazo, jugadores, carnaval, puntajes).
+Los clientes solo muestran la información y envían acciones.
 
-Al jugar una carta, se aplican las reglas de Parade:
+🚪 1. Unión de jugadores y preparación
 
-- Se mira cuántas cartas había en el carnaval antes de jugar (prev).  
-- Sea v el valor de la carta jugada.  
-  - Si prev ≤ v → no se retira ninguna carta.  
-  - Si prev > v → se miran solo las primeras (prev − v) cartas del carnaval.  
-    - De esas, se retira toda carta que tenga el mismo color que la carta jugada o valor menor o igual que v.  
-- Las cartas retiradas pasan a la pila de cartas recolectadas del jugador que hizo la jugada.  
-- Luego, si todavía no estamos en la última ronda y quedan cartas en el mazo, el jugador roba una carta para reponer su mano.  
-- Finalmente, el turno pasa al siguiente jugador.
+Antes de jugar:
 
-Durante esta fase, el servidor lleva el control del turno actual, del contenido del mazo, del carnaval y de las cartas recolectadas por cada jugador.  
-Cuando ocurre un cambio (por ejemplo, se juega una carta), el modelo notifica a los clientes mediante eventos, y cada cliente actualiza su vista (gráfica o consola) para mostrar el nuevo estado de la partida.
+Los clientes se conectan al servidor.
 
-3) Última ronda y fin de partida  
-En el proyecto se considera especialmente el caso de 2 jugadores.
+Cada jugador se une indicando un nombre.
 
-La “última ronda” se dispara cuando:
+El servidor prepara la partida:
 
-- algún jugador logra recolectar al menos una carta de cada uno de los 6 colores, o  
-- se queda sin cartas el mazo.
+Mezcla el mazo
 
-A partir de ese momento, ya no se roba más del mazo y se juegan las últimas cartas que quedan en las manos.
+Reparte las cartas
 
-La partida termina cuando se cumple:
+Coloca cartas iniciales en el carnaval
 
-- hay última ronda activa, y  
-- todos los jugadores tienen exactamente 4 cartas en la mano (regla particular implementada para la versión de 2 jugadores).
+Define quién empieza
 
-En ese momento, el servidor calcula los puntajes finales de cada jugador y los registra en una tabla de clasificación (ranking histórico).
+No hay jugadas todavía; es solo configuración inicial.
 
-Objetivo  
-El objetivo del juego es terminar la partida con el menor puntaje posible.
+🔁 2. Turnos y jugadas
 
-El puntaje de cada jugador se calcula a partir de sus cartas recolectadas:
+La partida avanza por turnos.
+En cada turno, un jugador:
 
-- Se suman todos los valores de las cartas recolectadas.  
-- Para cada color, se otorgan puntos adicionales al jugador que tiene mayoría en ese color (con una regla especial para 2 jugadores, donde la diferencia debe ser de al menos 2 cartas para que cuente como mayoría).  
-- El resultado final es:  
-  puntos totales = suma de valores de las cartas recolectadas + bonificación por mayorías de color.
+Elige una carta de su mano
 
-El jugador con menor puntaje final es el ganador de la partida.
+La juega al final del carnaval
 
-Implementación (resumen técnico breve)  
-El proyecto utiliza una arquitectura MVC distribuida:
+El servidor aplica las reglas de Parade:
 
-- Modelo: contiene la lógica del juego y el estado de la partida (`ModeloParade`, `EstadoPartida`, `Jugador`, `Carta`, etc.).  
-- Vistas: hay dos implementaciones intercambiables, una gráfica (Swing) y otra por consola, que muestran la mano, el carnaval, el turno y los puntajes.  
-- Controlador: se ejecuta del lado del cliente, recibe las acciones del usuario (unirse, iniciar partida, jugar carta) y las traduce en llamadas remotas al modelo mediante RMI.
+Reglas al jugar una carta:
 
-Además, se emplea un patrón Observer remoto:  
-el modelo notifica a los controladores cuando ocurre un evento (como una carta jugada, inicio de partida, llegada de la última ronda o final de partida), y el controlador actualiza la vista para mantener sincronizado lo que ve cada jugador.
+Si prev ≤ valor, no se retira nada
 
-Diagrama de clases UML  
+Si prev > valor, se evalúan las primeras prev - valor cartas
 
-El diagrama de clases UML incluye:
+Se retiran las que:
+
+tienen el mismo color que la jugada, o
+
+tienen valor menor o igual
+
+Las cartas retiradas van a la pila de “recolectadas” del jugador.
+
+Luego:
+
+Si no es última ronda → el jugador roba una carta del mazo
+
+El turno pasa al siguiente
+
+El modelo envía un evento para actualizar todas las vistas
+
+🔔 3. Última ronda y fin de partida
+
+Se activa cuando:
+
+Un jugador recolectó los 6 colores, o
+
+Se vació el mazo
+
+Ahí ya no se roba más cartas.
+
+La partida termina cuando:
+
+Última ronda está activa, y
+
+Todos los jugadores tienen exactamente 4 cartas en la mano
+
+El servidor:
+
+Calcula puntajes finales
+
+Actualiza el ranking
+
+Notifica a todos los clientes
+
+🎯 Objetivo del juego
+
+Ganar = tener menos puntos.
+
+Los puntos se calculan así:
+
+Suma de todos los valores de las cartas recolectadas
+
+Bonificación por mayorías de color
+
+En 2 jugadores, la mayoría vale solo si hay diferencia de 2 o más
+
+🧩 Implementación (en 15 segundos)
+
+Modelo:
+Tiene las reglas, estado completo del juego y ranking.
+
+Controlador:
+Está en el cliente.
+Traduce acciones (jugar, iniciar, unirse) a llamadas RMI.
+Recibe eventos del servidor.
+
+Vistas:
+Gráfica (Swing) y consola.
+Se actualizan con lo que el controlador les envía.
+
+Observer remoto:
+Cuando el servidor cambia algo,
+todos los clientes se actualizan automáticamente.
+
+📐 Diagrama UML  
 
 - Las clases principales del modelo del juego (ModeloParade, EstadoPartida, Jugador, Carta, TablaClasificacion, EntradaRanking).  
 - La interfaz remota IParade, utilizada por los clientes para comunicarse con el servidor.  
